@@ -48,23 +48,26 @@ print(f"users: {users_df.count()} -> {users_clean_df.count()} rows")
 print(f"purchases: {purchases_df.count()} -> {purchases_clean_df.count()} rows")
 print(f"products: {products_df.count()} -> {products_clean_df.count()} rows")
 
-# Prepare the common dataset. One purchase's cost is quantity * unit price.
-purchases_with_details_df = (
-    purchases_clean_df.join(users_clean_df, on="user_id", how="inner")
-    .join(products_clean_df, on="product_id", how="inner")
+# Prepare purchases with product data. A purchase's cost is quantity * unit price.
+# This dataset is deliberately independent of users: stage 3 must retain valid
+# purchases even if their user row was removed during user-data cleaning.
+purchases_with_products_df = (
+    purchases_clean_df.join(products_clean_df, on="product_id", how="inner")
     .withColumn("purchase_amount", F.col("quantity") * F.col("price"))
 )
 
 # 3. Total purchase amount by product category.
 category_totals_df = (
-    purchases_with_details_df.groupBy("category")
+    purchases_with_products_df.groupBy("category")
     .agg(F.round(F.sum("purchase_amount"), 2).alias("total_purchase_amount"))
     .orderBy(F.desc("total_purchase_amount"))
 )
 show_result("3. Total purchases by category", category_totals_df)
 
 # 4. Purchase amount by category for users aged 18 through 25 inclusive.
-young_purchases_df = purchases_with_details_df.filter(F.col("age").between(18, 25))
+young_purchases_df = purchases_with_products_df.join(
+    users_clean_df, on="user_id", how="inner"
+).filter(F.col("age").between(18, 25))
 young_category_totals_df = (
     young_purchases_df.groupBy("category")
     .agg(F.round(F.sum("purchase_amount"), 2).alias("total_purchase_amount"))
