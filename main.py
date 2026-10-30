@@ -48,9 +48,6 @@ print(f"users: {users_df.count()} -> {users_clean_df.count()} rows")
 print(f"purchases: {purchases_df.count()} -> {purchases_clean_df.count()} rows")
 print(f"products: {products_df.count()} -> {products_clean_df.count()} rows")
 
-# Prepare purchases with product data. A purchase's cost is quantity * unit price.
-# This dataset is deliberately independent of users: stage 3 must retain valid
-# purchases even if their user row was removed during user-data cleaning.
 purchases_with_products_df = (
     purchases_clean_df.join(products_clean_df, on="product_id", how="inner")
     .withColumn("purchase_amount", F.col("quantity") * F.col("price"))
